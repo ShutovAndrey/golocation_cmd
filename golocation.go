@@ -5,6 +5,7 @@ import (
 	"encoding/csv"
 	"fmt"
 	"github.com/ShutovAndrey/golocation/logger"
+	"github.com/joho/godotenv"
 	"github.com/pkg/errors"
 	"io"
 	"net"
@@ -14,6 +15,11 @@ import (
 	"strings"
 	"time"
 )
+
+func init() {
+	// get .env
+	godotenv.Load()
+}
 
 type IpAd struct {
 	ipNet *net.IPNet
@@ -63,14 +69,14 @@ func getLocationCodeByIp(ipAdresses *[]IpAd, needleIp net.IP) string {
 }
 
 func getFromDB(name string) ([]IpAd, map[string]string) {
-	files, err := downloadDB(name)
+	fileNames, err := downloadDB(name)
 	if err != nil {
 		logger.Error(err)
 	} else {
 		logger.Info(fmt.Sprintf("database %s successfully downloaded", name))
 	}
 
-	ipAdresses, err := readCsvFileIP(files["Blocks-IPv4"])
+	ipAdresses, err := readCsvFileIP(fileNames["Blocks-IPv4"])
 	if err != nil {
 		logger.Error(err)
 	}
@@ -82,7 +88,7 @@ func getFromDB(name string) ([]IpAd, map[string]string) {
 		key, value = 0, 5
 	}
 
-	locations, err := readCsvFile(files["Locations-en"], key, value)
+	locations, err := readCsvFile(fileNames["Locations-en"], key, value)
 	if err != nil {
 		logger.Error(err)
 	}
@@ -228,6 +234,11 @@ func readCsvFile(filePath string, key, value uint8) (map[string]string, error) {
 	for i, record := range records {
 		if i == 0 {
 			continue
+		}
+
+		length := uint8(len(record))
+		if key > length || value > length {
+			return nil, errors.Errorf("Invalid key-value pair")
 		}
 		dict[record[key]] = record[value]
 	}
