@@ -117,7 +117,7 @@ func downloadDB(dbType string) (map[string]string, error) {
 
 		var contentName string
 		name, ok := resp.Header["Content-Disposition"]
-		ok = false
+
 		if !ok {
 			contentName = fmt.Sprintf("GeoLite2-%s-CSV-%s.zip", dbType, time.Now().Format("01022006"))
 			logger.Info("No content-desposition header. The default name setted")
