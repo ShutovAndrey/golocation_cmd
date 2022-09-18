@@ -3,7 +3,6 @@ package main
 import (
 	"github.com/stretchr/testify/require"
 	"net"
-	"os"
 	"testing"
 )
 
@@ -61,32 +60,29 @@ func TestGetLocationCodeByIp(t *testing.T) {
 	})
 }
 
-func TestUnzip(t *testing.T) {
+func TestDownloadDB(t *testing.T) {
 	t.Run("Success", func(t *testing.T) {
-		files, err := unzip("./assets/GeoLite2-Country-CSV.zip", "./assets", "Country")
+		files, err := downloadDB("Country")
 		require.NoError(t, err)
 		require.Greater(t, len(files), 0)
 	})
 
 	t.Run("Error", func(t *testing.T) {
-		_, err := unzip("./assets/GeoLite2-Country777-CSV.zip", "./assets", "Country")
-		require.ErrorContains(t, err, "Can't open archive with files: open ./assets/GeoLite2-Country777-CSV.zip: no such file or directory", "")
+		_, err := downloadDB("CountryError")
+		require.ErrorContains(t, err, "Received non 200 response code", "")
 	})
 }
 
 func TestReadCsvFile(t *testing.T) {
-	//files at ./assets is static so we know their names
-	if _, err := os.Stat("GeoLite2-Country-CSV_20220913/GeoLite2-Country-Locations-en.csv"); err != nil {
-		unzip("./assets/GeoLite2-Country-CSV.zip", "./assets", "Country")
-	}
+	fileNames, _ := downloadDB("Country")
 	t.Run("Success", func(t *testing.T) {
-		ipMap, err := readCsvFile("./assets/GeoLite2-Country-CSV_20220913/GeoLite2-Country-Locations-en.csv", 0, 5)
+		ipMap, err := readCsvFile(fileNames["Locations-en"], 0, 5)
 		require.NoError(t, err)
 		require.Greater(t, len(ipMap), 0)
 	})
 
 	t.Run("Error", func(t *testing.T) {
-		_, err := readCsvFile("./assets/GeoLite2-Country-CSV_20220913/GeoLite2-Country-Locations-en.csv", 0, 18)
+		_, err := readCsvFile(fileNames["Locations-en"], 0, 18)
 		require.ErrorContains(t, err, "Invalid key-value pair", "")
 	})
 }
