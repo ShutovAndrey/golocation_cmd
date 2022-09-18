@@ -96,64 +96,65 @@ func getFromDB(name string) ([]IpAd, map[string]string) {
 }
 
 func downloadDB(dbType string) (map[string]string, error) {
+	var path, tmpDir, uri string
 	key, ok := os.LookupEnv("MAXMIND_KEY")
-	var path, tmpDir string
-
 	if ok {
-		uri := fmt.Sprintf(
+		uri = fmt.Sprintf(
 			"https://download.maxmind.com/app/geoip_download?edition_id=GeoLite2-%s-CSV&license_key=%s&suffix=zip",
 			dbType, key)
-
-		resp, err := http.Get(uri)
-		if err != nil {
-			return nil, errors.Wrap(err, "Can't download file")
-		}
-
-		if resp.StatusCode != 200 {
-			return nil, errors.Errorf("Received non 200 response code")
-		}
-
-		defer resp.Body.Close()
-
-		var contentName string
-		name, ok := resp.Header["Content-Disposition"]
-
-		if !ok {
-			contentName = fmt.Sprintf("GeoLite2-%s-CSV-%s.zip", dbType, time.Now().Format("01022006"))
-			logger.Info("No content-desposition header. The default name setted")
-		} else {
-			contentName = strings.Split(name[0], "filename=")[1]
-
-			if len(contentName) == 0 {
-				contentName = fmt.Sprintf("GeoLite2-%s-CSV-%s.zip", dbType, time.Now().Format("01022006"))
-				logger.Info("empty contentName. The default name setted")
-			}
-		}
-
-		tmpDir = os.TempDir()
-		path = filepath.Join(tmpDir, contentName)
-
-		out, err := os.Create(path)
-		if err != nil {
-			return nil, errors.Wrapf(err, "Can't create file %s", path)
-
-		}
-		defer out.Close()
-
-		// Change permissions
-		err = os.Chmod(path, 0665)
-		if err != nil {
-			return nil, errors.Wrapf(err, "Can't change permission to file %s", path)
-		}
-
-		_, err = io.Copy(out, resp.Body)
-		if err != nil {
-			return nil, errors.Wrapf(err, "Can't copy to file %s", path)
-		}
 	} else {
-		//if you havent maxmind key
-		path = fmt.Sprintf("./assets/GeoLite2-%s-CSV.zip", dbType)
-		tmpDir = "./assets"
+		if dbType == "Country" {
+			uri = "https://gist.github.com/ShutovAndrey/16f98ad0cff549a782a31942e456f1ba/raw/8ca6715285b02b125772c45ae0b67babc21cad95/GeoLite2-Country-CSV.zip"
+		} else {
+			uri = "https://gist.github.com/ShutovAndrey/dada04a211a785856cd383c858410c8c/raw/78775d68b7ed276538bdc11811f1d15182a56169/GeoLite2-City-CSV.zip"
+		}
+	}
+
+	resp, err := http.Get(uri)
+	if err != nil {
+		return nil, errors.Wrap(err, "Can't download file")
+	}
+
+	if resp.StatusCode != 200 {
+		return nil, errors.Errorf("Received non 200 response code")
+	}
+
+	defer resp.Body.Close()
+
+	var contentName string
+	name, ok := resp.Header["Content-Disposition"]
+
+	if !ok {
+		contentName = fmt.Sprintf("GeoLite2-%s-CSV-%s.zip", dbType, time.Now().Format("01022006"))
+		logger.Info("No content-desposition header. The default name setted")
+	} else {
+		contentName = strings.Split(name[0], "filename=")[1]
+
+		if len(contentName) == 0 {
+			contentName = fmt.Sprintf("GeoLite2-%s-CSV-%s.zip", dbType, time.Now().Format("01022006"))
+			logger.Info("empty contentName. The default name setted")
+		}
+	}
+
+	tmpDir = os.TempDir()
+	path = filepath.Join(tmpDir, contentName)
+
+	out, err := os.Create(path)
+	if err != nil {
+		return nil, errors.Wrapf(err, "Can't create file %s", path)
+
+	}
+	defer out.Close()
+
+	// Change permissions
+	err = os.Chmod(path, 0665)
+	if err != nil {
+		return nil, errors.Wrapf(err, "Can't change permission to file %s", path)
+	}
+
+	_, err = io.Copy(out, resp.Body)
+	if err != nil {
+		return nil, errors.Wrapf(err, "Can't copy to file %s", path)
 	}
 
 	files, err := unzip(path, tmpDir, dbType)
@@ -229,7 +230,7 @@ func readCsvFile(filePath string, key, value uint8) (map[string]string, error) {
 		return nil, err
 	}
 
-	dict := make(map[string]string)
+	dict := make(map[string]string, len(records))
 
 	for i, record := range records {
 		if i == 0 {
@@ -264,7 +265,7 @@ func readCsvFileIP(filePath string) ([]IpAd, error) {
 		return nil, err
 	}
 
-	var ipAdresses []IpAd
+	ipAdresses := make([]IpAd, 0, len(records))
 
 	for i, record := range records {
 		if i == 0 {
