@@ -78,7 +78,7 @@ func TestReadCsvFile(t *testing.T) {
 	t.Run("Success", func(t *testing.T) {
 		ipMap, err := readCsvFile(fileNames["Locations-en"], 0, 5)
 		require.NoError(t, err)
-		require.Greater(t, len(ipMap), 0)
+		require.Greater(t, len(ipMap), 100)
 	})
 
 	t.Run("Error", func(t *testing.T) {
